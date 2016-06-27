@@ -26,11 +26,14 @@ Before starting you need to copy or mount the contents of your current master's
 yamldir on the diff node, new master and old master.If you have multiple masters then combine
 the yamldirs of all nodes to give the fullest picture of all catalogs
 
-
+Puppet 3.x:
 You can retrieve the current yamldir location with the following command:
 `puppet master --configprint yamldir`. If you are using  Puppet
 Enterprise this directory is '/var/opt/lib/pe-puppet/yaml'. It is not required
 to use a specific "diff" node , as you could use the "new" puppet server.
+
+Puppet 4.x+:
+/opt/puppetlabs/server/data/puppetserver/yaml
 
 Once the yamldir is in place you need to allow access to the "diff" node to
 compile the catalogs for all nodes on both your old and new masters.

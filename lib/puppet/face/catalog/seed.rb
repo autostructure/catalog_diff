@@ -1,14 +1,14 @@
 require 'puppet/face'
 require 'thread'
-#require 'puppet/application/master'
+# require 'puppet/application/master'
 
 Puppet::Face.define(:catalog, '0.0.1') do
   action :seed do
-    summary "Generate a series of catalogs"
-    arguments "<path/to/seed/directory> fact=CaseSensitiveValue"
+    summary 'Generate a series of catalogs'
+    arguments '<path/to/seed/directory> fact=CaseSensitiveValue'
 
-    option "--master_server SERVER" do
-      summary "The server from which to download the catalogs from"
+    option '--master_server SERVER' do
+      summary 'The server from which to download the catalogs from'
       default_to { Facter.value('fqdn') }
     end
 
@@ -27,16 +27,18 @@ Puppet::Face.define(:catalog, '0.0.1') do
       $ puppet catalog seed /tmp/old_catalogs 'virtual=virtualbox'
     EOT
 
-    when_invoked do |save_directory,args,options|
-      require File.expand_path(File.join(File.dirname(__FILE__), "..", "..", "catalog-diff", "searchfacts.rb"))
-      require File.expand_path(File.join(File.dirname(__FILE__), "..", "..", "catalog-diff", "compilecatalog.rb"))
+    when_invoked do |save_directory, args, options|
+      require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'searchfacts.rb'))
+      require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'compilecatalog.rb'))
+      # require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'factgathering.rb'))
 
       # If the args contains a fact search then assume its not a node_name
-      if args =~ /.*=.*/
-        nodes = Puppet::CatalogDiff::SearchFacts.new(args).find_nodes(options)
-      else
-        nodes = args.split(',')
-      end
+      nodes = if args =~ %r{.*=.*}
+                Puppet::CatalogDiff::SearchFacts.new(args).find_nodes(options)
+              else
+                args.split(',')
+              end
+
       unless save_directory =~ /.*\/.*/
         raise "The directory path passed (#{save_directory}) is not an absolute path, mismatched arguments?"
       end
@@ -44,16 +46,22 @@ Puppet::Face.define(:catalog, '0.0.1') do
         Puppet.debug("Directory did not exist, creating #{save_directory}")
         FileUtils.mkdir(save_directory)
       end
+
+      # nodes.each {|node|
+      #  Puppet::CatalogDiff::FactGathering.new(node, save_directory, options[:master_server])
+      #   # puts "node: #{node}"
+      # }
+
       thread_count = 10
       compiled_nodes = []
       failed_nodes = {}
       mutex = Mutex.new
 
-      thread_count.times.map {
-        Thread.new(nodes,compiled_nodes,options) do |nodes,compiled_nodes,options|
+      Array.new(thread_count) {
+        Thread.new(nodes, compiled_nodes, options) do |nodes, compiled_nodes, options|
           while node_name = mutex.synchronize { nodes.pop }
             begin
-              compiled = Puppet::CatalogDiff::CompileCatalog.new(node_name,save_directory,options[:master_server])
+              compiled = Puppet::CatalogDiff::CompileCatalog.new(node_name, save_directory, options[:master_server])
               mutex.synchronize { compiled_nodes << node_name }
             rescue Exception => e
               Puppet.err("Unable to compile catalog for #{node_name}\n\t#{e}")
@@ -70,13 +78,12 @@ Puppet::Face.define(:catalog, '0.0.1') do
     end
 
     when_rendering :console do |output|
-      output.collect do |key|
-        if key == :compiled_nodes
-          key.each do |node|
-            "Compiled Node: #{node}"
-          end
+      output.map { |key|
+        next unless key == :compiled_nodes
+        key.each do |node|
+          "Compiled Node: #{node}"
         end
-      end.join("\n") + "#{output[:failed_nodes].join("\n")}\nFailed on #{output[:failed_nodes].size} nodes"
+      }.join("\n") + "#{output[:failed_nodes].join("\n")}\nFailed on #{output[:failed_nodes].size} nodes"
     end
   end
 end
