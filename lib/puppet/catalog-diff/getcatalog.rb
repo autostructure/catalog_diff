@@ -6,9 +6,7 @@ module Puppet::CatalogDiff
   class GetCatalog
     def initialize(node_name, fact_set, save_directory, server)
       catalog = retrieve_catalog(node_name, fact_set, server)
-
       begin
-        Puppet.debug('Inside facts section of factgathering.rb')
         JSON.parse(catalog)
         save_facts_to_disk(save_directory, node_name, catalog, 'json')
       rescue Exception => e

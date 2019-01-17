@@ -16,19 +16,16 @@ Puppet::Face.define(:catalog, '0.0.1') do
 
     option '--fact_search=' do
       summary 'Fact search used to filter which catalogs are compiled and compared'
-
       default_to { 'kernel=Linux' }
     end
 
-    option '--old_pe_branch' do
+    option '--old_pe_branch=' do
       summary 'Old puppet master branch to compare with'
-
       default_to { 'production' }
     end
 
-    option '--new_pe_branch' do
+    option '--new_pe_branch=' do
       summary 'New puppet master branch to compare with'
-
       default_to { 'production' }
     end
 
@@ -95,7 +92,7 @@ Puppet::Face.define(:catalog, '0.0.1') do
       Compare host catalogs:
 
       $ puppet catalog diff host-2.6.yaml host-3.0.pson
-      $ puppet catalog diff /tmp/old_catalogs_directory /tmp/new_catalogs_keys_directory
+      $ puppet catalog diff /tmp/old_catalogs_directory /tmp/new_catalogs_directory
     EOT
 
     when_invoked do |old_pe_hostname, new_pe_hostname, options|
@@ -107,18 +104,21 @@ Puppet::Face.define(:catalog, '0.0.1') do
 
       # Create two directories for the catalogs
       old_catalogs_directory = Dir.mktmpdir("#{old_pe_hostname.tr('/', '_')}-")
-      new_catalogs_keys_directory = Dir.mktmpdir("#{new_pe_hostname.tr('/', '_')}-")
-
+      new_catalogs_directory = Dir.mktmpdir("#{new_pe_hostname.tr('/', '_')}-")
+      Puppet.debug("Options: #{options}")
       pull_output =
         Puppet::Face[:catalog, '0.0.1'].pull(
-          old_pe_hostname, new_pe_hostname, old_catalogs_directory, new_catalogs_keys_directory, options[:fact_search],
-          changed_depth: options[:changed_depth], threads: options[:threads], filter_local: options[:filter_local]
+          old_pe_hostname, options[:old_pe_branch], new_pe_hostname, options[:new_pe_branch], old_catalogs_directory, new_catalogs_directory, options[:fact_search], changed_depth: options[:changed_depth], threads: options[:threads], filter_local: options[:filter_local]
         )
-      # diff_output = Puppet::Face[:catalog, '0.0.1'].diff(old_catalogs_directory, new_catalogs_keys_directory, options)
+
+      Puppet.debug("Pull ouput #{pull_output}")
+      #diff_output = Puppet::Face[:catalog, '0.0.1'].diff(old_catalogs_directory, new_catalogs_directory, options)
 
       # User passed us two directories full of pson
-      found_catalogs = Puppet::CatalogDiff::FindCatalogs.new(old_catalogs_directory, new_catalogs_keys_directory).return_catalogs(options)
+      found_catalogs = Puppet::CatalogDiff::FindCatalogs.new(old_catalogs_directory, new_catalogs_directory).return_catalogs(options)
+
       new_catalogs_keys = found_catalogs.keys
+      Puppet.debug("Found catalogs: #{found_catalogs}")
 
       if HAS_PARALLEL_GEM
         results = Parallel.map(new_catalogs_keys) do |new_catalog|
@@ -144,24 +144,18 @@ Puppet::Face.define(:catalog, '0.0.1') do
         }.each(&:join)
       end
 
-      nodes = diff_output
-
       FileUtils.rm_rf(old_catalogs_directory)
-      FileUtils.rm_rf(new_catalogs_keys_directory)
-
+      FileUtils.rm_rf(new_catalogs_directory)
       nodes[:pull_output] = pull_output
 
-      # Save the file as it can take a while to create
-      if options[:output_report]
-        Puppet.notice("Writing report to disk: #{options[:output_report]}")
-        File.open(options[:output_report], 'w') do |f|
-          f.write(nodes.to_json)
-        end
-      end
+      Puppet.debug("Nodes after pull_output added: #{nodes[:pull_output]}")
 
-      # diff_output = nodes
+      Puppet.debug("Node count: #{nodes.count}")
 
-      with_changes = nodes.select { |_node, summary| summary.is_a?(Hash) && !summary[:node_percentage].zero? }
+      with_changes = nodes.select { |_node, summary| summary.is_a?(Hash) && !summary[:node_percentage].nil? && !summary[:node_percentage].zero? }
+
+      Puppet.debug("With changes: #{with_changes}")
+
       most_changed = with_changes.sort_by { |_node, summary| summary[:node_percentage] }.map do |node, summary|
         Hash[node => summary[:node_percentage]]
       end
@@ -169,6 +163,7 @@ Puppet::Face.define(:catalog, '0.0.1') do
       most_differences = with_changes.sort_by { |_node, summary| summary[:node_differences] }.map do |node, summary|
         Hash[node => summary[:node_differences]]
       end
+
       total_nodes = nodes.size
       nodes[:total_percentage]   = (nodes.map { |_node, summary| summary.is_a?(Hash) && summary[:node_percentage] || nil }.compact.reduce { |sum, x| sum.to_f + x } / total_nodes)
       nodes[:with_changes]       = with_changes.size
@@ -177,6 +172,13 @@ Puppet::Face.define(:catalog, '0.0.1') do
       nodes[:total_nodes]        = total_nodes
       nodes[:date]               = Time.new.iso8601
       nodes
+
+      if options[:output_report]
+        Puppet.notice("Writing report to disk: #{options[:output_report]}")
+        File.open(options[:output_report], 'w') do |f|
+          f.write(nodes.to_json)
+        end
+      end
     end
 
     when_rendering :console do |nodes|

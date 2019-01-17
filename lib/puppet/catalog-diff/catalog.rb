@@ -4,26 +4,25 @@ require 'json'
 
 module Puppet::CatalogDiff
   # A compiled catalog from Puppet Enterprise
+  # The get_factsets retrieves all of the factsets on a puppet master
+  #
+  # @param pe_hostname [String] The hostname of the puppet enterprise server to pull the factsets from
+  # @param environment [String] The environment to use when catalog compiling
+  # @param node [String] The name of the ndoe to run a compile against
+  # @param facts [Array<Hash>] List of facts to compile the catalog againsts
+  # @return [Catalog] a compiled catalog from the Puppet Enterprise Server
   class Catalog
-    def self.get_catalog(server, environment, node, facts)
-      catalog = ''
-
+    def self.get_catalog(pe_hostname, environment, node, facts)
       # Clone a passed in object.
       local_facts = facts.clone
 
-      # Ensure name, tracer, and clientcert match node name. Delete the trusted facts.
-      # local_facts["name"] = node
-
-      # local_facts["values"]["tracer"] = node
-      # local_facts["values"]["clientcert"] = node
-
-      local_facts["values"].delete("trusted")
+      local_facts['values'].delete('trusted')
 
       # Let's stick to PSON for now. Early version of Puppet accept only PSON.
       facts_pson = PSON.generate(local_facts)
 
       # Escape facts not once, not thrice, but twice
-      facts_pson_encoded = CGI.escape(CGI.escape(facts_pson))
+      facts_pson_encoded = URI.escape(URI.escape(facts_pson))
 
       endpoint = "/puppet/v3/catalog/#{node}?environment=#{environment}"
       data = "environment=production&facts_format=pson&facts=#{facts_pson_encoded}"

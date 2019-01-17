@@ -42,7 +42,7 @@ Puppet::Face.define(:catalog, '0.0.1') do
       $ puppet catalog pull /tmp/old_catalogs /tmp/new_catalogs kernel=Linux --old_server puppet2.puppetlabs.vm --new_server puppet3.puppetlabs.vm
     EOT
 
-    when_invoked do |old_pe_hostname, new_pe_hostname, old_catalogs_directory, new_catalogs_directory, args, options|
+    when_invoked do |old_pe_hostname, old_pe_branch, new_pe_hostname, new_pe_branch, old_catalogs_directory, new_catalogs_directory, args, options|
       require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'searchfacts.rb'))
       require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'compilecatalog.rb'))
       require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'factset.rb'))
@@ -53,14 +53,17 @@ Puppet::Face.define(:catalog, '0.0.1') do
       failed_nodes = {}
       mutex = Mutex.new
 
-      Puppet.debug("ARGS: #{ARGV}")
-      Puppet.debug("args: #{args}")
-      Puppet.debug("options: #{options}")
-      Puppet.debug("Old PE hostname: #{old_pe_hostname}")
-      Puppet.debug("New PE hostname: #{new_pe_hostname}")
+      Puppet.debug("pull:ARGS: #{ARGV}")
+      Puppet.debug("pull:args: #{args}")
+      Puppet.debug("pull:options: #{options}")
 
       factsets = Puppet::CatalogDiff::FactSet.get_factsets(old_pe_hostname)
 
+      # Get facts array from factsets
+      pe_master_facts_index = factsets.index { |fs| fs.certname == old_pe_hostname }
+
+      # Remove the old pe master facts from the factsets. Do not want to compare it
+      factsets.delete_at(pe_master_facts_index)
       total_nodes = factsets.size
 
       # Array.new(thread_count) {
@@ -68,28 +71,35 @@ Puppet::Face.define(:catalog, '0.0.1') do
       #    while node_name = mutex.synchronize { nodes.pop }
       factsets.each do |factset|
         begin
-          environment = 'production'
 
-          Puppet.debug("environment: #{environment}")
-          Puppet.debug("factset.certname: #{factset.certname}")
+          Puppet.debug("pull:factset.certname: #{factset.certname}")
+          Puppet.debug("pull:old_pe_hostname: #{old_pe_hostname}")
+          Puppet.debug("pull:old_pe_branch: #{old_pe_branch}")
+          Puppet.debug("pull:new_pe_hostname: #{new_pe_hostname}")
+          Puppet.debug("pull:new_pe_branch: #{new_pe_branch}") 
 
-          catalog_old = Puppet::CatalogDiff::Catalog.get_catalog(old_pe_hostname, environment, factset.certname, factset.to_facts_schema)
-          catalog_new = Puppet::CatalogDiff::Catalog.get_catalog(new_pe_hostname, environment, factset.certname, factset.to_facts_schema)
+          catalog_old = Puppet::CatalogDiff::Catalog.get_catalog(old_pe_hostname, old_pe_branch, factset.certname, factset.to_facts_schema)
+          catalog_new = Puppet::CatalogDiff::Catalog.get_catalog(new_pe_hostname, new_pe_branch, factset.certname, factset.to_facts_schema)
+
+          # TODO check for failed compiles
+          compiled_nodes << factset.certname
 
           Puppet::CatalogDiff::CompileCatalog.save_catalog_to_disk(old_catalogs_directory, factset.certname, catalog_old.to_json, 'json')
           Puppet::CatalogDiff::CompileCatalog.save_catalog_to_disk(new_catalogs_directory, factset.certname, catalog_new.to_json, 'json')
-        rescue Exception => e
-          Puppet.err(e.to_s)
+        #rescue Exception => e
+        #  Puppet.err(e.to_s)
         end
       end
 
       output = {}
+
       output[:failed_nodes]         = failed_nodes
       output[:failed_nodes_total]   = failed_nodes.size
       output[:compiled_nodes]       = compiled_nodes.compact
       output[:compiled_nodes_total] = compiled_nodes.compact.size
       output[:total_nodes]          = total_nodes
       output[:total_percentage]     = (failed_nodes.size.to_f / total_nodes.to_f) * 100
+
       problem_files = {}
 
       failed_nodes.each do |node_name, error|
@@ -120,6 +130,7 @@ Puppet::Face.define(:catalog, '0.0.1') do
       output[:example_compile_errors] = example_errors
       output
     end
+
     when_rendering :console do |output|
       require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'formater.rb'))
       format = Puppet::CatalogDiff::Formater.new
@@ -136,8 +147,8 @@ Puppet::Face.define(:catalog, '0.0.1') do
       File.open("#{save_directory}/#{node_name}.#{extention}", 'w') do |f|
         f.write(catalog)
       end
-    rescue Exception => e
-      raise "Failed to save catalog for #{node_name} in #{save_directory}: #{e.message}"
+    #rescue Exception => e
+    #  raise "Failed to save catalog for #{node_name} in #{save_directory}: #{e.message}"
     end
   end
 end

@@ -123,6 +123,8 @@ module Puppet::CatalogDiff
 
       divide_by = (changes_percentage.zero? ? 0 : 1) + (additions_percentage.zero? ? 0 : 1) + (subtractions_percentage.zero? ? 0 : 1)
       output[:node_percentage]       = (divide_by == 0 && 0 || additions_percentage == 100 && 100 || (changes_percentage + additions_percentage + subtractions_percentage) / divide_by).to_f
+
+      Puppet.debug("Node percentage: #{output[:node_percentage]}")
       output[:node_differences]      = (additions.abs.to_i + subtractions.abs.to_i + changes.abs.to_i)
       output
     end

@@ -30,7 +30,6 @@ Puppet::Face.define(:catalog, '0.0.1') do
     when_invoked do |save_directory, args, options|
       require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'searchfacts.rb'))
       require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'compilecatalog.rb'))
-      # require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'factgathering.rb'))
 
       # If the args contains a fact search then assume its not a node_name
       nodes = if args =~ %r{.*=.*}
@@ -46,11 +45,6 @@ Puppet::Face.define(:catalog, '0.0.1') do
         Puppet.debug("Directory did not exist, creating #{save_directory}")
         FileUtils.mkdir(save_directory)
       end
-
-      # nodes.each {|node|
-      #  Puppet::CatalogDiff::FactGathering.new(node, save_directory, options[:master_server])
-      #   # puts "node: #{node}"
-      # }
 
       thread_count = 10
       compiled_nodes = []
