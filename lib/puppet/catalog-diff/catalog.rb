@@ -3,6 +3,7 @@ require 'uri'
 require 'json'
 
 module Puppet::CatalogDiff
+  # A compiled catalog from Puppet Enterprise
   class Catalog
     def self.get_catalog(server, environment, node, facts)
       catalog = ''
@@ -28,7 +29,7 @@ module Puppet::CatalogDiff
       data = "environment=production&facts_format=pson&facts=#{facts_pson_encoded}"
 
       begin
-        connection = Puppet::Network::HttpPool.http_instance(server, '8140')
+        connection = Puppet::Network::HttpPool.http_instance(pe_hostname, '8140')
         response = connection.post(endpoint, data, 'Content-Type' => 'application/x-www-form-urlencoded').body
 
         filtered = JSON.parse(response)
@@ -43,10 +44,10 @@ module Puppet::CatalogDiff
           filtered['environment'],
           filtered['resources'],
           filtered['edges'],
-          filtered['classes']
+          filtered['classes'],
         )
-      rescue Exception => e
-        raise "Error retrieving catalog from #{server}: #{e.message}"
+      #rescue Exception => e
+      #  raise "Error retrieving catalog from #{server}: #{e.message}"
       end
 
       catalog
@@ -63,7 +64,7 @@ module Puppet::CatalogDiff
         'environment' => @environment,
         'resources' => @resources,
         'edges' => @edges,
-        'classes' => @classes
+        'classes' => @classes,
       }.to_json
     end
 
@@ -82,11 +83,11 @@ module Puppet::CatalogDiff
 
     def ==(other_item)
       @tags == other_item.tags &&
-      @name == other_item.name &&
-      @environment == other_item.environment &&
-      @resources == other_item.resources &&
-      @edges == other_item.edges &&
-      @classes == other_item.classes
+        @name == other_item.name &&
+        @environment == other_item.environment &&
+        @resources == other_item.resources &&
+        @edges == other_item.edges &&
+        @classes == other_item.classes
     end
 
     def eql?(other_item)

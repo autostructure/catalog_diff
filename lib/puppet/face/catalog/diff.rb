@@ -28,7 +28,7 @@ Puppet::Face.define(:catalog, '0.0.1') do
 
     option '--new_pe_branch' do
       summary 'New puppet master branch to compare with'
-    
+
       default_to { 'production' }
     end
 
@@ -95,7 +95,7 @@ Puppet::Face.define(:catalog, '0.0.1') do
       Compare host catalogs:
 
       $ puppet catalog diff host-2.6.yaml host-3.0.pson
-      $ puppet catalog diff /tmp/old_catalogs_directory /tmp/new_catalogs_directory
+      $ puppet catalog diff /tmp/old_catalogs_directory /tmp/new_catalogs_keys_directory
     EOT
 
     when_invoked do |old_pe_hostname, new_pe_hostname, options|
@@ -103,59 +103,63 @@ Puppet::Face.define(:catalog, '0.0.1') do
       require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'findcatalogs.rb'))
       Puppet.err('Add --debug for realtime output, add --render-as {json,yaml} for parsed output')
 
-
       nodes = {}
 
       # Create two directories for the catalogs
       old_catalogs_directory = Dir.mktmpdir("#{old_pe_hostname.tr('/', '_')}-")
-      new_catalogs_directory = Dir.mktmpdir("#{new_pe_hostname.tr('/', '_')}-")
+      new_catalogs_keys_directory = Dir.mktmpdir("#{new_pe_hostname.tr('/', '_')}-")
 
-      pull_output = Puppet::Face[:catalog, '0.0.1'].pull(old_pe_hostname, new_pe_hostname, old_catalogs_directory, new_catalogs_directory, options[:fact_search], changed_depth: options[:changed_depth], threads: options[:threads], filter_local: options[:filter_local])
-      #diff_output = Puppet::Face[:catalog, '0.0.1'].diff(old_catalogs_directory, new_catalogs_directory, options)
-  
+      pull_output =
+        Puppet::Face[:catalog, '0.0.1'].pull(
+          old_pe_hostname, new_pe_hostname, old_catalogs_directory, new_catalogs_keys_directory, options[:fact_search],
+          changed_depth: options[:changed_depth], threads: options[:threads], filter_local: options[:filter_local]
+        )
+      # diff_output = Puppet::Face[:catalog, '0.0.1'].diff(old_catalogs_directory, new_catalogs_keys_directory, options)
+
       # User passed us two directories full of pson
-      found_catalogs = Puppet::CatalogDiff::FindCatalogs.new(old_catalogs_directory,new_catalogs_directory).return_catalogs(options)
-      new_catalogs = found_catalogs.keys
+      found_catalogs = Puppet::CatalogDiff::FindCatalogs.new(old_catalogs_directory, new_catalogs_keys_directory).return_catalogs(options)
+      new_catalogs_keys = found_catalogs.keys
 
       if HAS_PARALLEL_GEM
-        results = Parallel.map(new_catalogs) do |new_catalog|
-          node_name    = File.basename(new_catalog,File.extname(new_catalog))
+        results = Parallel.map(new_catalogs_keys) do |new_catalog|
+          node_name    = File.basename(new_catalog, File.extname(new_catalog))
           old_catalog  = found_catalogs[new_catalog]
           node_summary = Puppet::CatalogDiff::Differ.new(old_catalog, new_catalog).diff(options)
-          [ node_name, node_summary ]
+          [node_name, node_summary]
         end
         nodes = Hash[results]
       else
         thread_count = 1
         mutex = Mutex.new
 
-        thread_count.times.map {
-            Thread.new(nodes,new_catalogs,options) do |nodes,new_catalogs,options|
-              while new_catalog = mutex.synchronize { new_catalogs.pop }
-                node_name    = File.basename(new_catalog,File.extname(new_catalog))
-                old_catalog  = found_catalogs[new_catalog]
-                node_summary = Puppet::CatalogDiff::Differ.new(old_catalog, new_catalog).diff(options)
-                mutex.synchronize { nodes[node_name] = node_summary }
-              end
+        Array.new(thread_count) {
+          Thread.new(nodes, new_catalogs_keys, options) do |nodes, new_catalogs_keys, options|
+            while new_catalog = mutex.synchronize { new_catalogs_keys.pop }
+              node_name    = File.basename(new_catalog, File.extname(new_catalog))
+              old_catalog  = found_catalogs[new_catalog]
+              node_summary = Puppet::CatalogDiff::Differ.new(old_catalog, new_catalog).diff(options)
+              mutex.synchronize { nodes[node_name] = node_summary }
             end
-          }.each(&:join)
-   end
+          end
+        }.each(&:join)
+      end
 
       nodes = diff_output
 
       FileUtils.rm_rf(old_catalogs_directory)
-      FileUtils.rm_rf(new_catalogs_directory)
-      
+      FileUtils.rm_rf(new_catalogs_keys_directory)
+
       nodes[:pull_output] = pull_output
-        
-        # Save the file as it can take a while to create
-        if options[:output_report]
-          Puppet.notice("Writing report to disk: #{options[:output_report]}")
-          File.open(options[:output_report], 'w') do |f|
-            f.write(nodes.to_json)
-          end
+
+      # Save the file as it can take a while to create
+      if options[:output_report]
+        Puppet.notice("Writing report to disk: #{options[:output_report]}")
+        File.open(options[:output_report], 'w') do |f|
+          f.write(nodes.to_json)
         end
-        return nodes
+      end
+
+      # diff_output = nodes
 
       with_changes = nodes.select { |_node, summary| summary.is_a?(Hash) && !summary[:node_percentage].zero? }
       most_changed = with_changes.sort_by { |_node, summary| summary[:node_percentage] }.map do |node, summary|

@@ -1,21 +1,22 @@
 require 'puppet/network/http_pool'
-# require 'uri'
 require 'json'
 require 'net/http'
 
 module Puppet::CatalogDiff
+  # A list of all facts taken from Puppet Enterprise
   class FactSet
-    def self.get_factsets(server)
+    # The get_factsets retrieves all of the factsets on a puppet master
+    #
+    # @param pe_hostname [String] The hostname of the puppet enterprise server to pull the factsets from
+    # @return [Array<FactSets] a list of the factsets contained in enterprise's puppet database
+    def self.get_factsets(pe_hostname)
       factsets = []
       endpoint = '/pdb/query/v4/factsets'
+
       begin
-        # response = Net::HTTP.get URI("https://#{server}:8081/pdb/query/v4/factsets")
-        connection = Puppet::Network::HttpPool.http_instance(server, '8081')
+        connection = Puppet::Network::HttpPool.http_instance(pe_hostname, '8081')
         response = connection.request_get(endpoint, 'Accept' => 'application/json').body
-        # Puppet.debug "response = #{response}"
-        #
         filtered = PSON.load(response)
-        # json = JSON.parse(response)
 
         filtered.each do |factset|
           factsets << Puppet::CatalogDiff::FactSet.new(
@@ -28,8 +29,8 @@ module Puppet::CatalogDiff
             factset['environment'],
           )
         end
-      rescue Exception => e
-        raise "Error retrieving factset from #{server}: #{e.message}"
+      # rescue Exception => e
+      #   raise "Error retrieving factset from #{server}: #{e.message}"
       end
 
       factsets
@@ -47,8 +48,8 @@ module Puppet::CatalogDiff
 
     def ==(other_item)
       @facts == other_item.facts &&
-      @certname == other_item.certname &&
-      @environment == other_item.environment
+        @certname == other_item.certname &&
+        @environment == other_item.environment
     end
 
     def eql?(other_item)
@@ -59,23 +60,22 @@ module Puppet::CatalogDiff
       # Parse all hashes of the facts data array and create large hash
       #
       facts_hash = {}
-      self.facts['data'].each do |fact|
+      facts['data'].each do |fact|
         fact_name = fact['name']
         fact_value = fact['value']
 
         facts_hash[fact_name] = fact_value
       end
       timestamp_new = DateTime.now
-      
+
       expiration = DateTime.iso8601(timestamp_new.iso8601(9)) + 1
 
       facts_schema = {
-        'name' => self.certname,
+        'name' => certname,
         'values' => facts_hash,
         'timestamp' => timestamp_new.iso8601(9),
-        'expiration' => expiration.iso8601(9)
+        'expiration' => expiration.iso8601(9),
       }
-
     end
 
     attr_reader :timestamp

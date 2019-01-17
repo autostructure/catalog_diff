@@ -53,43 +53,36 @@ Puppet::Face.define(:catalog, '0.0.1') do
       failed_nodes = {}
       mutex = Mutex.new
 
-      puts "ARGS: #{ARGV}"
-      puts "args: #{args}"
-      puts "options: #{options}"
+      Puppet.debug("ARGS: #{ARGV}")
+      Puppet.debug("args: #{args}")
+      Puppet.debug("options: #{options}")
       Puppet.debug("Old PE hostname: #{old_pe_hostname}")
       Puppet.debug("New PE hostname: #{new_pe_hostname}")
 
       factsets = Puppet::CatalogDiff::FactSet.get_factsets(old_pe_hostname)
+
       total_nodes = factsets.size
 
-      #Array.new(thread_count) {
+      # Array.new(thread_count) {
       #  Thread.new(nodes, compiled_nodes, options) do |nodes, compiled_nodes, options|
       #    while node_name = mutex.synchronize { nodes.pop }
-      factsets.each do |factset| 
+      factsets.each do |factset|
         begin
           environment = 'production'
 
           Puppet.debug("environment: #{environment}")
           Puppet.debug("factset.certname: #{factset.certname}")
-          #Puppet.debug("factset.to_facts_schema: #{factset.to_facts_schema}")
 
-          #catalog_old = Puppet::CatalogDiff::Catalog.get_catalog('master-old.puppet.com', environment, factset.certname, factset.facts)
-          #puts "catalog_old: #{catalog_old.to_json}" 
           catalog_old = Puppet::CatalogDiff::Catalog.get_catalog(old_pe_hostname, environment, factset.certname, factset.to_facts_schema)
           catalog_new = Puppet::CatalogDiff::Catalog.get_catalog(new_pe_hostname, environment, factset.certname, factset.to_facts_schema)
-          #Puppet.debug("New Catalog:  JSON.pretty_generate(catalog_new)
-          #catalog_new = Puppet::CatalogDiff::Catalog.get_catalog(new_pe_hostname, environment, factset.certname, factset.facts)
+
           Puppet::CatalogDiff::CompileCatalog.save_catalog_to_disk(old_catalogs_directory, factset.certname, catalog_old.to_json, 'json')
           Puppet::CatalogDiff::CompileCatalog.save_catalog_to_disk(new_catalogs_directory, factset.certname, catalog_new.to_json, 'json')
-          #Puppet.debug("Catalog: #{catalog}")
-          #mutex.synchronize { compiled_nodes + old_server[:compiled_nodes] }
-          #mutex.synchronize { compiled_nodes + new_server[:compiled_nodes] }
-          #mutex.synchronize { new_server[:failed_nodes][node_name].nil? || failed_nodes[node_name] = new_server[:failed_nodes][node_name] }
         rescue Exception => e
           Puppet.err(e.to_s)
         end
       end
-      
+
       output = {}
       output[:failed_nodes]         = failed_nodes
       output[:failed_nodes_total]   = failed_nodes.size
@@ -146,6 +139,5 @@ Puppet::Face.define(:catalog, '0.0.1') do
     rescue Exception => e
       raise "Failed to save catalog for #{node_name} in #{save_directory}: #{e.message}"
     end
-
   end
 end
