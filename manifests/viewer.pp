@@ -1,58 +1,59 @@
-class differ::viewer (
-  $remote    = 'https://github.com/camptocamp/puppet-catalog-diff-viewer.git',
-  $password  = 'puppet',
-  $revision  = 'master',
-  $port      = 1495,
-  $listen_ip = $ipaddress,
-) {
-  require git
+class catalogdiff::viewer (
+  String $remote = 'https://github.com/prolixalias/puppet-catalog-diff-viewer.git',
+  String $password = 'puppet',
+  String $revision = 'master',
+  Integer $port = 1495,
+  ) {
+  $viewer_on_diff_node = $::catalogdiff::viewer_on_diff_node
+  if $viewer_on_diff_node {
+    require git
 
-  class {'apache':
-    default_vhost     => false,
-    default_ssl_vhost => false,
-  }
+    class {'apache':
+      default_vhost     => false,
+      default_ssl_vhost => false,
+    }
 
-  apache::vhost {"${listen_ip}:${port}":
-    servername  => $fqdn,
-    ip          => $listen_ip,
-    docroot     => '/var/www/diff',
-    ip_based    => true,
-    directories => [
-      { path            => '/var/www/diff',
-        auth_type       => 'Basic',
-        auth_name       => 'Catalog Diff',
-        auth_user_file  => '/var/www/.htpasswd',
-        auth_group_file => '/dev/null',
-        auth_require    => 'valid-user',
-        allow_override  => 'AuthConfig',
-      },
-    ],
-    priority    => '15',
-    require     => Htpasswd['puppet'],
-    port        => $port,
-    add_listen  => true,
-  }
+    apache::vhost {"${listen_ip}:${port}":
+      servername  => $::fqdn,
+      ip          => $::ipaddress,
+      docroot     => '/var/www/diff',
+      ip_based    => true,
+      directories => [
+        { path            => '/var/www/diff',
+          auth_type       => 'Basic',
+          auth_name       => 'Catalog Diff',
+          auth_user_file  => '/var/www/.htpasswd',
+          auth_group_file => '/dev/null',
+          auth_require    => 'valid-user',
+          allow_override  => 'AuthConfig',
+        },
+      ],
+      priority    => '15',
+      require     => Htpasswd['puppet'],
+      port        => $port,
+      add_listen  => true,
+    }
 
-  htpasswd { 'puppet':
-    username    => 'puppet',
-    cryptpasswd => ht_crypt($password,$uuid),
-    target      => '/var/www/.htpasswd',
-  }
+    htpasswd { 'puppet':
+      username    => 'puppet',
+      cryptpasswd => ht_crypt($password,$uuid),
+      target      => '/var/www/.htpasswd',
+    }
 
-  include apache::params
+    include apache::params
 
-  file { '/var/www/.htpasswd':
-    ensure => 'file',
-    owner  => $apache::params::user,
-    group  => $apache::params::group,
-    mode   => '0700',
-    before => Htpasswd['puppet'],
-  }
+    file { '/var/www/.htpasswd':
+      ensure => 'file',
+      owner  => $apache::params::user,
+      group  => $apache::params::group,
+      mode   => '0700',
+      before => Htpasswd['puppet'],
+    }
 
-  vcsrepo { '/var/www/diff':
-    ensure   => latest,
-    provider => 'git',
-    source   => $remote,
-    revision => $revision,
+    vcsrepo { '/var/www/diff':
+      provider => 'git',
+      source   => $remote,
+      revision => $revision,
+    }
   }
 }
