@@ -71,23 +71,22 @@ Puppet::Face.define(:catalog, '0.0.1') do
       #    while node_name = mutex.synchronize { nodes.pop }
       factsets.each do |factset|
         begin
-
           Puppet.debug("pull:factset.certname: #{factset.certname}")
           Puppet.debug("pull:old_pe_hostname: #{old_pe_hostname}")
           Puppet.debug("pull:old_pe_branch: #{old_pe_branch}")
           Puppet.debug("pull:new_pe_hostname: #{new_pe_hostname}")
-          Puppet.debug("pull:new_pe_branch: #{new_pe_branch}") 
+          Puppet.debug("pull:new_pe_branch: #{new_pe_branch}")
 
           catalog_old = Puppet::CatalogDiff::Catalog.get_catalog(old_pe_hostname, old_pe_branch, factset.certname, factset.to_facts_schema)
           catalog_new = Puppet::CatalogDiff::Catalog.get_catalog(new_pe_hostname, new_pe_branch, factset.certname, factset.to_facts_schema)
 
-          # TODO check for failed compiles
+          # TODO: check for failed compiles
           compiled_nodes << factset.certname
 
           Puppet::CatalogDiff::CompileCatalog.save_catalog_to_disk(old_catalogs_directory, factset.certname, catalog_old.to_json, 'json')
           Puppet::CatalogDiff::CompileCatalog.save_catalog_to_disk(new_catalogs_directory, factset.certname, catalog_new.to_json, 'json')
-        #rescue Exception => e
-        #  Puppet.err(e.to_s)
+          # rescue Exception => e
+          #  Puppet.err(e.to_s)
         end
       end
 
@@ -147,8 +146,8 @@ Puppet::Face.define(:catalog, '0.0.1') do
       File.open("#{save_directory}/#{node_name}.#{extention}", 'w') do |f|
         f.write(catalog)
       end
-    #rescue Exception => e
-    #  raise "Failed to save catalog for #{node_name} in #{save_directory}: #{e.message}"
+      # rescue Exception => e
+      #  raise "Failed to save catalog for #{node_name} in #{save_directory}: #{e.message}"
     end
   end
 end

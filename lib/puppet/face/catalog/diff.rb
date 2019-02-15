@@ -112,7 +112,7 @@ Puppet::Face.define(:catalog, '0.0.1') do
         )
 
       Puppet.debug("Pull ouput #{pull_output}")
-      #diff_output = Puppet::Face[:catalog, '0.0.1'].diff(old_catalogs_directory, new_catalogs_directory, options)
+      # diff_output = Puppet::Face[:catalog, '0.0.1'].diff(old_catalogs_directory, new_catalogs_directory, options)
 
       # User passed us two directories full of pson
       found_catalogs = Puppet::CatalogDiff::FindCatalogs.new(old_catalogs_directory, new_catalogs_directory).return_catalogs(options)

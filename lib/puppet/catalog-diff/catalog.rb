@@ -45,8 +45,8 @@ module Puppet::CatalogDiff
           filtered['edges'],
           filtered['classes'],
         )
-      #rescue Exception => e
-      #  raise "Error retrieving catalog from #{server}: #{e.message}"
+        # rescue Exception => e
+        #  raise "Error retrieving catalog from #{server}: #{e.message}"
       end
 
       catalog
@@ -63,7 +63,7 @@ module Puppet::CatalogDiff
         'environment' => @environment,
         'resources' => @resources,
         'edges' => @edges,
-        'classes' => @classes,
+        'classes' => @classes
       }.to_json
     end
 

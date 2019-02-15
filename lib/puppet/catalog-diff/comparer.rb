@@ -101,7 +101,7 @@ module Puppet::CatalogDiff
       end
       differences = {
         titles_only_in_old: only_in_old,
-        titles_only_in_new: only_in_new,
+        titles_only_in_new: only_in_new
       }
       differences
     end

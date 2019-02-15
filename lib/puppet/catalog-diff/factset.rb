@@ -29,8 +29,8 @@ module Puppet::CatalogDiff
             factset['environment'],
           )
         end
-      # rescue Exception => e
-      #   raise "Error retrieving factset from #{server}: #{e.message}"
+        # rescue Exception => e
+        #   raise "Error retrieving factset from #{server}: #{e.message}"
       end
 
       factsets
@@ -74,7 +74,7 @@ module Puppet::CatalogDiff
         'name' => certname,
         'values' => facts_hash,
         'timestamp' => timestamp_new.iso8601(9),
-        'expiration' => expiration.iso8601(9),
+        'expiration' => expiration.iso8601(9)
       }
     end
 
