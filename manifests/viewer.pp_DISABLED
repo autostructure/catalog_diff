@@ -1,3 +1,7 @@
+#
+# Class to setup viewer on designated diff node.
+#
+
 class catalogdiff::viewer (
   String $remote = 'https://github.com/prolixalias/puppet-catalog-diff-viewer.git',
   String $password = 'puppet',
@@ -15,7 +19,7 @@ class catalogdiff::viewer (
         default_ssl_vhost => false,
       }
 
-      apache::vhost {"${listen_ip}:${port}":
+      apache::vhost {"${::listen_ip}:${port}":
         servername  => $::fqdn,
         ip          => $::ipaddress,
         docroot     => '/var/www/diff',
@@ -38,7 +42,7 @@ class catalogdiff::viewer (
 
       htpasswd { 'puppet':
         username    => 'puppet',
-        cryptpasswd => ht_crypt($password,$uuid),
+        cryptpasswd => ht_crypt($password,$::uuid),
         target      => '/var/www/.htpasswd',
       }
 

@@ -1,4 +1,7 @@
 #
+# This class configures master(s) to allow a specific node to requerst facts
+# and compiled catalogs, using those facts.
+#
 # Typically unwise for production. Make sure you UNDERSTAND the implications
 # of enabling "allow" class prior to doing so. Noteworthy considerations:
 #
@@ -34,7 +37,7 @@ class catalogdiff::allow_on_masters (
 
   # logic to setup/remove configs based on parameter
   if $allow_on_masters {
-    warning('Running "allow_on_masters" class set to true enforces a potentially exploitable configuration. Read and understand the implications of leaving this parameter enabled. Additional information is located inside "differ::allow" subclass.')
+    warning('Leaving "allow_on_masters" class set to true enforces a potentially exploitable configuration.')
     $state = present
   }
   else {
@@ -48,7 +51,6 @@ class catalogdiff::allow_on_masters (
     notify => Service['pe-puppetdb'],
   }
 
-  # docker-diff
   file_line { "autosign ${diff_node}":
     ensure => $state,
     path   => $path_autosign_dot_conf,
