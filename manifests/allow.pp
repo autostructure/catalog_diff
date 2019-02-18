@@ -26,14 +26,14 @@
 # contain reference to diff_node hostname.
 #
 
-class catalogdiff::allow (
+class puppet_catalog_diff::allow (
 ) {
 
-  $allow_on_masters = $::catalogdiff::allow_on_masters
-  $path_certificate_whitelist = $::catalogdiff::path_certificate_whitelist
-  $path_autosign_dot_conf = $::catalogdiff::path_autosign_dot_conf
-  $path_auth_dot_conf = $::catalogdiff::path_auth_dot_conf
-  $diff_node = $::catalogdiff::diff_node
+  $allow_on_masters = $::catalog_diff_allow::allow_on_masters
+  $path_certificate_whitelist = $::puppet_catalog_diff::path_certificate_whitelist
+  $path_autosign_dot_conf = $::puppet_catalog_diff::path_autosign_dot_conf
+  $path_auth_dot_conf = $::puppet_catalog_diff::path_auth_dot_conf
+  $diff_node = $::puppet_catalog_diff::diff_node
 
   # logic to setup/remove configs based on parameter
   if $allow_on_masters {

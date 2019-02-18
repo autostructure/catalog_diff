@@ -1,8 +1,8 @@
 #
-# The main class for catalogdiff module - ordering-only at the monent
+# The main class for module - ordering-only at the monent
 #
 
-class catalogdiff (
+class puppet_catalog_diff (
   String $diff_node = 'diff-node',
   String $path_certificate_whitelist = '/etc/puppetlabs/puppetdb/certificate-whitelist',
   String $path_autosign_dot_conf = '/etc/puppetlabs/puppet/autosign.conf',
@@ -10,7 +10,7 @@ class catalogdiff (
   Boolean $allow = false,
   Boolean $viewer_on_diff_node = false,
 ) {
-  class {'::catalogdiff::allow':}
-  #-> Class['::catalogdiff::viewer']
-  -> Class['::catalogdiff']
+  class {'::puppet_catalog_diff::allow':}
+  #-> Class['::puppet_catalog_diff::viewer']
+  -> Class['::puppet_catalog_diff']
 }
