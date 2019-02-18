@@ -10,7 +10,7 @@ class catalogdiff (
   Boolean $allow = false,
   Boolean $viewer_on_diff_node = false,
 ) {
-  class {'::catalogdiff::allow_on_masters':}
+  class {'::catalogdiff::allow':}
   #-> Class['::catalogdiff::viewer']
   -> Class['::catalogdiff']
 }

@@ -26,7 +26,7 @@
 # contain reference to diff_node hostname.
 #
 
-class catalogdiff::allow_on_masters (
+class catalogdiff::allow (
 ) {
 
   $allow_on_masters = $::catalogdiff::allow_on_masters
