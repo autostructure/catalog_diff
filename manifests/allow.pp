@@ -29,7 +29,7 @@
 class puppet_catalog_diff::allow (
 ) {
 
-  $allow_on_masters = $::catalog_diff_allow::allow_on_masters
+  $allow_on_masters = $::puppet_catalog_diff::allow
   $path_certificate_whitelist = $::puppet_catalog_diff::path_certificate_whitelist
   $path_autosign_dot_conf = $::puppet_catalog_diff::path_autosign_dot_conf
   $path_auth_dot_conf = $::puppet_catalog_diff::path_auth_dot_conf
