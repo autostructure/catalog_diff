@@ -44,18 +44,24 @@ class puppet_catalog_diff::allow (
     $state = absent
   }
 
+  if (defined(Service['pe-puppetdb'])) {
+    $notify = Service['pe-puppetdb']
+  } else {
+    $notify = undef
+  }
+
   file_line { "whitelist ${diff_node}":
     ensure => $state,
     path   => $path_certificate_whitelist,
     line   => $diff_node,
-    notify => Service['pe-puppetdb'],
+    notify => $notify,
   }
 
   file_line { "autosign ${diff_node}":
     ensure => $state,
     path   => $path_autosign_dot_conf,
     line   => $diff_node,
-    notify => Service['pe-puppetdb'],
+    notify => $notify,
   }
 
   puppet_authorization::rule { "facts endpoint ${diff_node}":
