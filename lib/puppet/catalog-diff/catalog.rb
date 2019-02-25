@@ -24,8 +24,10 @@ module Puppet::CatalogDiff
       # Escape facts not once, not thrice, but twice
       facts_pson_encoded = URI.escape(URI.escape(facts_pson))
 
-      endpoint = "/puppet/v3/catalog/#{node}?environment=#{environment}"
-      data = "environment=production&facts_format=pson&facts=#{facts_pson_encoded}"
+      #endpoint = "/puppet/v3/catalog/#{node}?environment=#{environment}"
+      #data = "environment=#{environment}&facts_format=pson&facts=#{facts_pson_encoded}"
+      endpoint = "/puppet/v3/catalog/#{node}"
+      data = "environment=#{environment}&facts_format=pson&facts=#{facts_pson_encoded}"
 
       begin
         connection = Puppet::Network::HttpPool.http_instance(pe_hostname, '8140')
