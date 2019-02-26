@@ -64,6 +64,12 @@ class puppet_catalog_diff::allow (
     notify => $notify,
   }
 
+  if (defined(Service['pe-puppetserver'])) {
+    $notify_server = Service['pe-puppetserver']
+  } else {
+    $notify_server = undef
+  }
+
   puppet_authorization::rule { "facts endpoint ${diff_node}":
     ensure               => $state,
     match_request_path   => '^/puppet/v3/facts/([^/]+)$',
@@ -72,7 +78,7 @@ class puppet_catalog_diff::allow (
     allow                => ['$1', $diff_node],
     sort_order           => 200,
     path                 => $path_auth_dot_conf,
-    notify               => Service['pe-puppetserver'],
+    notify               => $notify_server,
   }
 
   puppet_authorization::rule { "catalog endpoint ${diff_node}":
@@ -83,7 +89,7 @@ class puppet_catalog_diff::allow (
     allow                => ['$1', $diff_node],
     sort_order           => 200,
     path                 => $path_auth_dot_conf,
-    notify               => Service['pe-puppetserver'],
+    notify               => $notify_server,
   }
 
 }
