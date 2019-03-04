@@ -66,6 +66,8 @@ Puppet::Face.define(:catalog, '0.0.1') do
       factsets.delete_at(pe_master_facts_index)
       total_nodes = factsets.size
 
+      Puppet.notice("Processing #{total_nodes} nodes...")
+
       # Array.new(thread_count) {
       #  Thread.new(nodes, compiled_nodes, options) do |nodes, compiled_nodes, options|
       #    while node_name = mutex.synchronize { nodes.pop }
@@ -98,6 +100,8 @@ Puppet::Face.define(:catalog, '0.0.1') do
       output[:compiled_nodes_total] = compiled_nodes.compact.size
       output[:total_nodes]          = total_nodes
       output[:total_percentage]     = (failed_nodes.size.to_f / total_nodes.to_f) * 100
+
+      Puppet.notice("Processing #{output[:failed_nodes_total]} failed nodes...")
 
       problem_files = {}
 

@@ -16,22 +16,31 @@ module Puppet::CatalogDiff
       # Clone a passed in object.
       local_facts = facts.clone
 
+      Puppet.debug("node #{node}: local_facts...\n#{local_facts}")
+
       local_facts['values'].delete('trusted')
 
       # Let's stick to PSON for now. Early version of Puppet accept only PSON.
       facts_pson = PSON.generate(local_facts)
 
       # Escape facts not once, not thrice, but twice
-      facts_pson_encoded = URI.escape(URI.escape(facts_pson))
+      facts_pson_encoded = URI.escape(URI.escape(facts_pson), "()/\\[]:.,-_&")
+
+      #Puppet.debug("node-#{node}-facts_pson_encoded:\n#{facts_pson_encoded}\n")
 
       endpoint = "/puppet/v3/catalog/#{node}?environment=#{environment}"
-      #data = "environment=#{environment}&facts_format=pson&facts=#{facts_pson_encoded}"
+      #endpoint = "/#{environment}/catalog/#{node}"
       #endpoint = "/puppet/v3/catalog/#{node}"
+      #data = "environment=#{environment}&facts_format=pson&facts=#{facts_pson_encoded}"
       data = "facts_format=pson&facts=#{facts_pson_encoded}"
 
       begin
         connection = Puppet::Network::HttpPool.http_instance(pe_hostname, '8140')
         response = connection.post(endpoint, data, 'Content-Type' => 'application/x-www-form-urlencoded').body
+
+        Puppet.notice("Querying REST API endpoint => https://#{pe_hostname}:8140#{endpoint}")
+        Puppet.debug("HTTP response for #{node}...\n#{response}")
+        #Puppet.notice("data=#{data}")
 
         filtered = JSON.parse(response)
 
@@ -48,7 +57,7 @@ module Puppet::CatalogDiff
           filtered['classes'],
         )
         # rescue Exception => e
-        #  raise "Error retrieving catalog from #{server}: #{e.message}"
+        #   raise "Error retrieving catalog from #{server}: #{e.message}"
       end
 
       catalog
