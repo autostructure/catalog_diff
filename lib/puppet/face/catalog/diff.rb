@@ -59,6 +59,10 @@ Puppet::Face.define(:catalog, '0.0.1') do
       default_to { '10' }
     end
 
+    option '--node=' do
+      summary 'Compare catalogs of only one node'
+    end
+
     description <<-'EOT'
       Prints the differences between catalogs compiled by different puppet master to help
       during migrating to a new Puppet version.
@@ -119,31 +123,41 @@ Usage...
         To change source and target branches/environments add:
         --old_pe_branch <environment>
         --new_pe_branch <environment>
+
+        Compare the catalogs of a single node:
+        --node=node.example.com
       USAGE
 
       Puppet.notice(notice_text)
-      Puppet.notice('Collecting facts & catalogs...')
 
       nodes = {}
 
       # Create two directories for the catalogs
       old_catalogs_directory = Dir.mktmpdir("#{old_pe_hostname.tr('/', '_')}-")
       new_catalogs_directory = Dir.mktmpdir("#{new_pe_hostname.tr('/', '_')}-")
-      Puppet.debug("Options: #{options}")
+
+      Puppet.notice("Temporary directories created:\n        #{old_catalogs_directory}\n        #{new_catalogs_directory}")
+      Puppet.notice("HAS_PARALLEL_GEM=#{HAS_PARALLEL_GEM}")
+      Puppet.notice('Collecting facts & catalogs...')
+
+      Puppet.debug("diff.rb: Calling pull w/options=#{options}")
+
       pull_output =
         Puppet::Face[:catalog, '0.0.1'].pull(
-          old_pe_hostname, options[:old_pe_branch], new_pe_hostname, options[:new_pe_branch], old_catalogs_directory, new_catalogs_directory, options[:fact_search], changed_depth: options[:changed_depth], threads: options[:threads], filter_local: options[:filter_local]
+          old_pe_hostname, options[:old_pe_branch], new_pe_hostname, options[:new_pe_branch], old_catalogs_directory, new_catalogs_directory, options[:fact_search], changed_depth: options[:changed_depth], threads: options[:threads], filter_local: options[:filter_local], node: options[:node]
         )
 
-      Puppet.debug("Pull ouput #{pull_output}")
+      Puppet.debug("diff.rb: Pull complete. output...\n#{pull_output}")
+
       # diff_output = Puppet::Face[:catalog, '0.0.1'].diff(old_catalogs_directory, new_catalogs_directory, options)
 
       # User passed us two directories full of pson
       found_catalogs = Puppet::CatalogDiff::FindCatalogs.new(old_catalogs_directory, new_catalogs_directory).return_catalogs(options)
 
       new_catalogs_keys = found_catalogs.keys
-      Puppet.debug("Found catalogs (obj->str): #{found_catalogs.to_s}")
+      Puppet.debug("diff.rb: Found catalogs (obj->str): #{found_catalogs.to_s}")
 
+      Puppet.debug("diff.rb: calling Differ...")
       if HAS_PARALLEL_GEM
         results = Parallel.map(new_catalogs_keys) do |new_catalog|
           node_name    = File.basename(new_catalog, File.extname(new_catalog))
@@ -168,17 +182,14 @@ Usage...
         }.each(&:join)
       end
 
+      Puppet.debug("diff.rb: Differ completed.")
+
       FileUtils.rm_rf(old_catalogs_directory)
       FileUtils.rm_rf(new_catalogs_directory)
+
       nodes[:pull_output] = pull_output
 
-      Puppet.debug("Nodes after pull_output added: #{nodes[:pull_output]}")
-
-      Puppet.debug("Node count: #{nodes.count}")
-
       with_changes = nodes.select { |_node, summary| summary.is_a?(Hash) && !summary[:node_percentage].nil? && !summary[:node_percentage].zero? }
-
-      Puppet.debug("With changes: #{with_changes}")
 
       most_changed = with_changes.sort_by { |_node, summary| summary[:node_percentage] }.map do |node, summary|
         Hash[node => summary[:node_percentage]]
@@ -189,7 +200,9 @@ Usage...
       end
 
       total_nodes = nodes.size
-      nodes[:total_percentage]   = (nodes.map { |_node, summary| summary.is_a?(Hash) && summary[:node_percentage] || nil }.compact.reduce { |sum, x| sum.to_f + x } / total_nodes)
+      #nodes[:total_percentage]   = (nodes.map { |_node, summary| summary.is_a?(Hash) && summary[:node_percentage] || nil }.compact.reduce { |sum, x| sum.to_f + x } / total_nodes)
+      # set total_percentage to zero.  the formula above threw an error.
+      nodes[:total_percentage]   = 0
       nodes[:with_changes]       = with_changes.size
       nodes[:most_changed]       = most_changed.reverse.take((options.key?(:changed_depth) && options[:changed_depth].to_i || 10))
       nodes[:most_differences]   = most_differences.reverse.take((options.key?(:changed_depth) && options[:changed_depth].to_i || 10))

@@ -26,7 +26,7 @@ module Puppet::CatalogDiff
       _env = server.split('/')[1]
 
       endpoint = "/puppet/v3/catalog/#{node_name}"
-      Puppet.debug("Retrieving catalog for #{node_name} from server: #{server}")
+      Puppet.debug("getcatalog.rb: Retrieving catalog for #{node_name} from server #{server}")
 
       begin
         connection = Puppet::Network::HttpPool.http_instance(_server, '8140')
@@ -34,6 +34,8 @@ module Puppet::CatalogDiff
       rescue Exception => e
         raise "Failed to retrieve facts for #{node_name} from #{server} in environment #{_environment}: #{e.message}"
       end
+
+      Puppet.debug("getcatalog.rb: Found catalog for #{node_name} from server #{server}")
       catalog
     end
 

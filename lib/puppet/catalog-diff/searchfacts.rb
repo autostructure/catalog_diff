@@ -64,8 +64,8 @@ module Puppet::CatalogDiff
         raise "Received invalid data from facts endpoint on filtered: #{filtered}, server: #{server}, query: #{query}, facts_object: #{facts_object}, emessage: #{e.message}"
       end
       names = filtered.map { |node| node['certname'] }
-      Puppet.debug("Names has: #{names}")
       names
+      Puppet.debug("searchfacts.rb: Names has: #{names}")
     end
 
     def find_nodes_puppetdb(env)
@@ -90,12 +90,21 @@ module Puppet::CatalogDiff
                ['=', 'title', capit]]]]]],
         )
       end
+
+      Puppet.debug("searchfacts.rb: b4 json")
       json_query = URI.escape(query.to_json)
+      Puppet.debug("searchfacts.rb: aft json")
+
+      Puppet.debug("searchfacts.rb: b4 PSON.load")
       unless filtered = PSON.load(connection.request_get("/pdb/query/v4/nodes?query=#{json_query}", 'Accept' => 'application/json').body)
         raise 'Error parsing json output of puppet search'
       end
+      Puppet.debug("searchfacts.rb: aft PSON.load")
+
       names = filtered.map { |node| node['certname'] }
       names
+
+
     end
   end
 end
