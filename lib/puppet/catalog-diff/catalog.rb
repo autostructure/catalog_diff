@@ -69,16 +69,16 @@ module Puppet::CatalogDiff
 
     def to_json
       {
-        'tags' => @tags,
-        'name' => @name,
-        'version' => @version,
-        'code_id' => @code_id,
-        'catalog_uuid' => @catalog_uuid,
-        'catalog_format' => @catalog_format,
-        'environment' => @environment,
-        'resources' => @resources,
-        'edges' => @edges,
-        'classes' => @classes
+        "tags" => @tags,
+        "name" => "#{@name}",
+        "version" => "#{@version}",
+        "code_id" => "#{@code_id}",
+        "catalog_uuid" => "#{@catalog_uuid}",
+        "catalog_format" => @catalog_format,
+        "environment" => "#{@environment}",
+        "resources" => @resources,
+        "edges" => @edges,
+        "classes" => @classes
       }.to_json
     end
 

@@ -70,7 +70,12 @@ Puppet::Face.define(:catalog, '0.0.1') do
       factsets.delete_at(pe_master_facts_index)
       total_nodes = factsets.size
 
-      Puppet.notice("Processing #{total_nodes} nodes...")
+      if !options[:node]
+        Puppet.notice("Processing #{total_nodes} nodes...")
+      else
+        Puppet.notice("Processing 1 node...")
+      end
+
 
       # Array.new(thread_count) {
       #  Thread.new(nodes, compiled_nodes, options) do |nodes, compiled_nodes, options|
@@ -79,7 +84,7 @@ Puppet::Face.define(:catalog, '0.0.1') do
         begin
           Puppet.debug("pull.rb: factset.certname: #{factset.certname}, old_pe_hostname: #{old_pe_hostname}, old_pe_branch: #{old_pe_branch}, new_pe_hostname: #{new_pe_hostname}, new_pe_branch: #{new_pe_branch}")
 
-          if options[:node].to_s.empty or factset.certname==options[:node]
+          if !options[:node] or factset.certname==options[:node]
             Puppet.debug("pull.rb: get_catalog(#{old_pe_hostname}, #{old_pe_branch}, #{factset.certname})")
             catalog_old = Puppet::CatalogDiff::Catalog.get_catalog(old_pe_hostname, old_pe_branch, factset.certname, factset.to_facts_schema)
             Puppet.debug("pull.rb: get_catalog(#{new_pe_hostname}, #{new_pe_branch}, #{factset.certname})")
@@ -90,9 +95,14 @@ Puppet::Face.define(:catalog, '0.0.1') do
             compiled_nodes << factset.certname
 
             Puppet.debug("pull.rb: b4 catalog 2 json")
-            Puppet::CatalogDiff::CompileCatalog.save_catalog_to_disk(old_catalogs_directory, factset.certname, catalog_old.to_json, 'json')
-            Puppet::CatalogDiff::CompileCatalog.save_catalog_to_disk(new_catalogs_directory, factset.certname, catalog_new.to_json, 'json')
+            begin
+              Puppet::CatalogDiff::CompileCatalog.save_catalog_to_disk(old_catalogs_directory, factset.certname, catalog_old.to_json, 'json')
+              Puppet::CatalogDiff::CompileCatalog.save_catalog_to_disk(new_catalogs_directory, factset.certname, catalog_new.to_json, 'json')
+            rescue Exception => e
+              Puppet.notice("Processing Error: #{factset.certname}: Skipping catalog.")
+            end
             Puppet.debug("pull.rb: aft catalog 2 json")
+
             # rescue Exception => e
             #  Puppet.err(e.to_s)
           end

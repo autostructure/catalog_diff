@@ -129,11 +129,6 @@ Usage...
       USAGE
 
       Puppet.notice(notice_text)
-      Puppet.notice('Collecting facts & catalogs...')
-
-      Puppet.notice("--node=#{options[:node]}")
-      Puppet.notice("--node.to_s.empty=#{options[:node].to_s.empty?}")
-      Puppet.notice("--!node=#{!options[:node]}")
 
       nodes = {}
 
@@ -141,7 +136,9 @@ Usage...
       old_catalogs_directory = Dir.mktmpdir("#{old_pe_hostname.tr('/', '_')}-")
       new_catalogs_directory = Dir.mktmpdir("#{new_pe_hostname.tr('/', '_')}-")
 
-      Puppet.notice("Temporary directories created:\n#{old_catalogs_directory}\n#{new_catalogs_directory}")
+      Puppet.notice("Temporary directories created:\n        #{old_catalogs_directory}\n        #{new_catalogs_directory}")
+      Puppet.notice("HAS_PARALLEL_GEM=#{HAS_PARALLEL_GEM}")
+      Puppet.notice('Collecting facts & catalogs...')
 
       Puppet.debug("diff.rb: Calling pull w/options=#{options}")
 
@@ -189,13 +186,10 @@ Usage...
 
       FileUtils.rm_rf(old_catalogs_directory)
       FileUtils.rm_rf(new_catalogs_directory)
+
       nodes[:pull_output] = pull_output
 
-      Puppet.debug("diff.rb: Node count: #{nodes.count}")
-
       with_changes = nodes.select { |_node, summary| summary.is_a?(Hash) && !summary[:node_percentage].nil? && !summary[:node_percentage].zero? }
-
-      Puppet.debug("diff.rb: With changes: #{with_changes}")
 
       most_changed = with_changes.sort_by { |_node, summary| summary[:node_percentage] }.map do |node, summary|
         Hash[node => summary[:node_percentage]]
@@ -206,7 +200,9 @@ Usage...
       end
 
       total_nodes = nodes.size
-      nodes[:total_percentage]   = (nodes.map { |_node, summary| summary.is_a?(Hash) && summary[:node_percentage] || nil }.compact.reduce { |sum, x| sum.to_f + x } / total_nodes)
+      #nodes[:total_percentage]   = (nodes.map { |_node, summary| summary.is_a?(Hash) && summary[:node_percentage] || nil }.compact.reduce { |sum, x| sum.to_f + x } / total_nodes)
+      # set total_percentage to zero.  the formula above threw an error.
+      nodes[:total_percentage]   = 0
       nodes[:with_changes]       = with_changes.size
       nodes[:most_changed]       = most_changed.reverse.take((options.key?(:changed_depth) && options[:changed_depth].to_i || 10))
       nodes[:most_differences]   = most_differences.reverse.take((options.key?(:changed_depth) && options[:changed_depth].to_i || 10))

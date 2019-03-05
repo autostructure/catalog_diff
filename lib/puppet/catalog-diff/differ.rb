@@ -60,6 +60,8 @@ module Puppet::CatalogDiff
             raise 'Loading JSON files will not work when using puppet-diff on Puppet 4.X'
           end
 
+          Puppet.notice("differ.rb: load catalog from file...")
+
           tmp = if Puppet::Resource::Catalog.respond_to? :from_data_hash
                   Puppet::Resource::Catalog.from_data_hash JSON.load(File.read(r))
                 else
@@ -69,6 +71,8 @@ module Puppet::CatalogDiff
         else
           raise 'Provide catalog with the appropriate file extension, valid extensions are pson, yaml and marshal'
         end
+
+        Puppet.notice("differ.rb: catalog file loaded.")
 
         m[:version] = tmp.version
 
@@ -85,7 +89,7 @@ module Puppet::CatalogDiff
         end
       end
 
-      Puppet.debug("Processing: #{from_file}")
+      Puppet.debug("differ.rb: Processing: #{from_file}")
       titles = {}
       titles[:to] = extract_titles(to)
       titles[:from] = extract_titles(from)
