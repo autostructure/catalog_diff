@@ -22,18 +22,33 @@ module Puppet::CatalogDiff
       facts_pson = PSON.generate(local_facts)
 
       # Escape facts not once, not thrice, but twice
-      facts_pson_encoded = URI.escape(URI.escape(facts_pson))
+      facts_pson_encoded = URI.escape(URI.escape(facts_pson), "\\/[](){}:;:.,-_$&%")
 
       Puppet.debug("node-#{node}-facts_pson_encoded:\n#{facts_pson_encoded}\n")
 
       endpoint = "/puppet/v3/catalog/#{node}?environment=#{environment}"
-      data = "environment=production&facts_format=pson&facts=#{facts_pson_encoded}"
+      data = "facts_format=pson&facts=#{facts_pson_encoded}"
+      #endpoint = "/#{environment}/catalog/#{node}"
+      #endpoint = "/puppet/v3/catalog/#{node}?environment=#{environment}"
+      #data = "environment=#{environment}&facts_format=pson&facts=#{facts_pson_encoded}"
+      #endpoint = "/puppet/v3/catalog/#{node}"
+      #data = "environment=production&facts_format=application%2Fjson&facts=#{facts_pson_encoded}"
+      #data = "environment=production&facts_format=pson&facts=%257B%2522name%2522%253A%2522vabxpptdiffp01%252Eblackstone%252Ecom%2522%257D"
 
       begin
         connection = Puppet::Network::HttpPool.http_instance(pe_hostname, '8140')
         response = connection.post(endpoint, data, 'Content-Type' => 'application/x-www-form-urlencoded').body
 
+        Puppet.debug("node #{node}: local_facts:\n#{local_facts}\n\n")
+        Puppet.debug("#{node}: facts_pson_encoded:\n#{facts_pson_encoded}\n\n\n\n")
+        Puppet.notice("Querying REST API endpoint: https://#{pe_hostname}:8140#{endpoint}")
+        Puppet.debug("HTTP POST data...\n#{data}")
+        Puppet.debug("HTTP response for #{node}...\n#{response}")
+
+        Puppet.debug("catalog.rb: b4 json parse response...")
         filtered = JSON.parse(response)
+        Puppet.debug("catalog.rb: aft json parse completed.")
+        Puppet.debug("catalog.rb: JSON.parse(response)=\n#{filtered}")
 
         catalog = Puppet::CatalogDiff::Catalog.new(
           filtered['tags'],
@@ -48,7 +63,7 @@ module Puppet::CatalogDiff
           filtered['classes'],
         )
         # rescue Exception => e
-        #  raise "Error retrieving catalog from #{server}: #{e.message}"
+        #   raise "Error retrieving catalog from #{server}: #{e.message}"
       end
       
       Puppet.debug("node-#{node}-catalog:\n#{catalog}\n")      
@@ -58,16 +73,16 @@ module Puppet::CatalogDiff
 
     def to_json
       {
-        'tags' => @tags,
-        'name' => @name,
-        'version' => @version,
-        'code_id' => @code_id,
-        'catalog_uuid' => @catalog_uuid,
-        'catalog_format' => @catalog_format,
-        'environment' => @environment,
-        'resources' => @resources,
-        'edges' => @edges,
-        'classes' => @classes
+        "tags" => @tags,
+        "name" => "#{@name}",
+        "version" => "#{@version}",
+        "code_id" => "#{@code_id}",
+        "catalog_uuid" => "#{@catalog_uuid}",
+        "catalog_format" => @catalog_format,
+        "environment" => "#{@environment}",
+        "resources" => @resources,
+        "edges" => @edges,
+        "classes" => @classes
       }.to_json
     end
 
