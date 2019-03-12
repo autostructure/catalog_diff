@@ -98,8 +98,33 @@ Puppet::Face.define(:catalog, '0.0.1') do
     when_invoked do |old_pe_hostname, new_pe_hostname, options|
       require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'differ.rb'))
       require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'catalog-diff', 'findcatalogs.rb'))
-      Puppet.err('Add --debug for realtime output, add --render-as {json,yaml} for parsed output')
 
+      notice_text = <<-USAGE
+Usage...
+
+        Command example:
+        $ sudo puppet catalog diff <old_master_fqdn> <new_master_fqdn> --render-as=json --output_report=catdiff.out
+
+        Save output:
+        --output_report=<filename>
+
+        Add for realtime output:
+        --debug
+
+        Change parsed output:
+        --render-as=[json|yaml]
+
+        The production environment is queried by default.
+
+        To change source and target branches/environments add:
+        --old_pe_branch <environment>
+        --new_pe_branch <environment>
+      USAGE
+
+      Puppet.notice("HAS_PARALLEL_GEM=#{HAS_PARALLEL_GEM}")
+      Puppet.notice(notice_text)
+      Puppet.notice('Collecting facts & catalogs...')
+ 
       nodes = {}
 
       # Create two directories for the catalogs
@@ -173,12 +198,17 @@ Puppet::Face.define(:catalog, '0.0.1') do
       nodes[:date]               = Time.new.iso8601
       nodes
 
+      Puppet.notice("Found #{nodes[:with_changes]} nodes with catalog changes")
+
       if options[:output_report]
         Puppet.notice("Writing report to disk: #{options[:output_report]}")
         File.open(options[:output_report], 'w') do |f|
           f.write(nodes.to_json)
         end
       end
+
+      Puppet.notice('Completed analysis.')
+
     end
 
     when_rendering :console do |nodes|

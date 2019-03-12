@@ -24,6 +24,8 @@ module Puppet::CatalogDiff
       # Escape facts not once, not thrice, but twice
       facts_pson_encoded = URI.escape(URI.escape(facts_pson))
 
+      Puppet.debug("node-#{node}-facts_pson_encoded:\n#{facts_pson_encoded}\n")
+
       endpoint = "/puppet/v3/catalog/#{node}?environment=#{environment}"
       data = "environment=production&facts_format=pson&facts=#{facts_pson_encoded}"
 
@@ -48,6 +50,8 @@ module Puppet::CatalogDiff
         # rescue Exception => e
         #  raise "Error retrieving catalog from #{server}: #{e.message}"
       end
+      
+      Puppet.debug("node-#{node}-catalog:\n#{catalog}\n")      
 
       catalog
     end
